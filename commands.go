@@ -52,8 +52,8 @@ func cmdListGroups(args []string) (output string) {
 }
 
 func cmdSendSpoofedReply(args []string) (output string) {
-	if len(args) < 4 {
-		output = "\n[send-spoofed-reply] Usage: send-spoofed-reply <chat_jid> <msgID:!|#ID> <spoofed_jid> <spoofed_text>|<text>"
+	if len(args) < 3 {
+		output = "\n[send-spoofed-reply] Usage: send-spoofed-reply <chat_jid> <spoofed_jid> <spoofed_text>|<text> [<msgID>]"
 		log.Errorf("%s", output)
 		return
 	}
@@ -65,32 +65,51 @@ func cmdSendSpoofedReply(args []string) (output string) {
 		return
 	}
 
-	msgID := args[1]
-	if msgID[0] == '!' {
-		msgID = cli.GenerateMessageID()
+	var startIndex int
+	var msgID string
+	var err error
+
+	// Determine if msgID is provided based on the args length and content.
+	if len(args) >= 4 && (args[2] == "!" || strings.HasPrefix(args[2], "#")) {
+		msgID = args[2]
+		startIndex = 3
+	} else {
+		msgID, err = generateRandomID()
+		if err != nil {
+			output = "\n[send-spoofed-reply] Error generating random msgID"
+			log.Errorf("%s", output)
+			return
+		}
+		startIndex = 2
 	}
 
-	spoofed_jid, ok2 := parseJID(args[2])
+	// Join the remaining arguments to account for spaces in the text.
+	joinedText := strings.Join(args[startIndex:], " ")
+	parameters := strings.SplitN(joinedText, "|", 2)
+	if len(parameters) != 2 {
+		output = "\n[send-spoofed-reply] Error: Text must be in the format <spoofed_text>|<text>"
+		log.Errorf("%s", output)
+		return
+	}
+
+	spoofed_text, text := parameters[0], parameters[1]
+	spoofed_jid, ok2 := parseJID(args[1])
 	if !ok2 {
 		output = "\n[send-spoofed-reply] You need to specify a valid User ID to spoof"
 		log.Errorf("%s", output)
 		return
 	}
 
-	parameters := strings.SplitN(strings.Join(args[3:], " "), "|", 2)
-	spoofed_text := parameters[0]
-	text := parameters[1]
-
+	// Assuming sendSpoofedReplyMessage sends the spoofed message and returns a response or an error.
 	_, resp, err := sendSpoofedReplyMessage(chat_jid, spoofed_jid, msgID, spoofed_text, text)
 	if err != nil {
 		output = fmt.Sprintf("\n[send-spoofed-reply] Error on sending spoofed msg: %v", err)
 		log.Errorf("%s", output)
-		return
 	} else {
-		output = fmt.Sprintf("\n[send-spoofed-reply] spoofed msg sended: %+v", resp)
+		output = fmt.Sprintf("\n[send-spoofed-reply] spoofed msg sent: %+v", resp)
 		log.Infof("%s", output)
-		return
 	}
+	return
 }
 
 func cmdSendSpoofedImgReply(args []string) (output string) {

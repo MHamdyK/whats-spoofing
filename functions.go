@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"math/big"
 	"mime"
 	"net/http"
 	"os"
@@ -15,6 +17,17 @@ import (
 	"go.mau.fi/whatsmeow/types/events"
 	"google.golang.org/protobuf/proto"
 )
+
+// function to generate random ID
+func generateRandomID() (string, error) {
+	// Use the big package's Int.Set to get a *big.Int equivalent to 2^64
+	max := new(big.Int).Lsh(big.NewInt(1), 64)
+	n, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return "", err // Handle the error appropriately
+	}
+	return fmt.Sprintf("#%d", n), nil
+}
 
 func sendSpoofedReplyThis(chatID types.JID, spoofedID types.JID, msgID string, text string, msg *waProto.Message) (*waProto.Message, *whatsmeow.SendResponse, error) {
 	newmsg := &waProto.Message{
@@ -175,7 +188,7 @@ func sendSpoofedTalkDemo(chatJID types.JID, spoofedJID types.JID, toGender strin
 	msgmap["en"]["girl"] = make(map[int]string)
 	msgmap["en"]["girl"][0] = "Last night was wonderful, come more often when my husband isn't here..."
 	msgmap["en"]["girl"][1] = "All yours!"
-        msgmap["ar"] = make(map[string]map[int]string)
+	msgmap["ar"] = make(map[string]map[int]string)
 	msgmap["ar"]["generic"] = make(map[int]string)
 	msgmap["ar"]["generic"][0] = "أهلا..."
 	msgmap["ar"]["generic"][1] = "مرحبا..."
